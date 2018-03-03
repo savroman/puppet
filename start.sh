@@ -3,24 +3,12 @@
 ###### START INSTALLATION ######
 
 # -- add tools --
-APPS=(mc net-tools wget git)
+APPS=(mc net-tools wget git ntp ntpdate)
 
 # -- create log file --
 mkdir /var/log/vagrant
 LOG=/var/log/vagrant/start.log
 #exec > $LOG 2>&1
-# -- settime time zone --
-#ZONE=`grep ZONE /etc/sysconfig/clock`
-#if [$ZONE == "*Europe/Kiev*"]
-#then
-#  echo "Time zone is corect" 1>$LOG
-#else
-  ping -c 10 8.8.8.8
-  rm -fr /etc/localtime
-  ln -s /usr/share/zoneinfo/Europe/Kiev /etc/localtime 2
-  yum install -y ntpdate
-  ntpdate -u pool.ntp.org
-  echo "Time zone is set to Kiev"
 
 # -- add basic tools to VM --
 yum update -y
@@ -33,6 +21,20 @@ for i in ${APPS[@]}; do
     yum install $i -y
   fi
 done
+
+# -- set timezone --
+timedatectl set-timezone Europe/Kiev
+ntpdate pool.ntp.org
+NTP_CONF=/etc/ntp.conf
+cat >> $NTP_CONF <<EOF
+server 0.ua.pool.ntp.org
+server 1.ua.pool.ntp.org
+server 2.ua.pool.ntp.org
+server 3.ua.pool.ntp.org
+EOF
+systemctl restart ntpd
+systemctl enable ntpd
+echo "Time zone is set to Kiev"
 
 # -- edit hosts --
 HOST_FILE=/etc/hosts
@@ -55,7 +57,9 @@ if [[ $(hostname) == puppet ]]; then
   else
     yum install puppetserver -y
     sed -i 's|-Xms2g -Xmx2g|-Xms512m -Xmx512m|g' /etc/sysconfig/puppetserver
+    sudo iptables -A INPUT -p tcp -m tcp --dport 8140 -j ACCEPT
     systemctl start puppetserver
+    systemctl enable puppetserver
   fi
 else
   yum install puppet-agent -y

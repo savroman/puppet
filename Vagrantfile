@@ -8,7 +8,7 @@ Vagrant.configure("2") do |config|
   config.vm.box = "centos/7"
   config.vm.provision "shell",  path: "start.sh"
   config.vm.define "pm" do |ms|
-    ms.vm.hostname = "puppet"
+    ms.vm.hostname = 'puppet'
     ms.vm.network "private_network", ip: "192.168.56.150"
     ms.vm.provider "virtualbox" do |vb|
       vb.memory = "1024"
